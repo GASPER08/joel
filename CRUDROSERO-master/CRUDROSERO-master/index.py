@@ -5,7 +5,8 @@ import pymongo
 from pymongo import errors
 from bson.objectid import ObjectId
 
-Mongo_Host = "localhost"
+# Parámetros de conexión a MongoDB
+Mongo_Host = "localhost"            
 Mongo_Puerto = "27017"
 Mongo_Tiempo_Fuera = 1000
 
@@ -13,6 +14,7 @@ Mongo_Uri = f"mongodb://{Mongo_Host}:{Mongo_Puerto}/"
 Mongo_Basedatos = "EquipoMamba"
 Mongo_colleccion = "Jugadores"
 
+# Conexión a la base de datos
 cliente = pymongo.MongoClient(Mongo_Uri, serverSelectionTimeoutMS=Mongo_Tiempo_Fuera)
 baseDatos = cliente[Mongo_Basedatos]
 coleccion = baseDatos[Mongo_colleccion]
@@ -20,26 +22,33 @@ coleccion = baseDatos[Mongo_colleccion]
 ID_Jugador = ""
 
 def mostrarDatos(nombre="", sexo="", numero=""):
+    """
+    Muestra en la tabla los jugadores que coincidan con los criterios de búsqueda.
+    Si no se pasan parámetros, muestra todos los jugadores.
+    """
     objetoBuscar = {}
-    if len(nombre) != 0:
+    if nombre:
         objetoBuscar["Nombre"] = nombre
-    if len(sexo) != 0:
+    if sexo:
         objetoBuscar["Sexo"] = sexo
-    if len(numero) != 0:
+    if numero:
         objetoBuscar["Numero"] = numero
 
     try:
-        tabla.delete(*tabla.get_children())  # Limpiar tabla
+        tabla.delete(*tabla.get_children())  # Limpiar tabla antes de actualizarla
         for documento in coleccion.find(objetoBuscar):
             tabla.insert('', 0, text=str(documento["_id"]),
-                    values=(documento["Nombre"], documento["Sexo"], documento["Numero"]))
+                         values=(documento["Nombre"], documento["Sexo"], documento["Numero"]))
     except errors.ServerSelectionTimeoutError as errorTiempo:
         print("Tiempo excedido:", errorTiempo)
     except errors.ConnectionFailure as errorConexion:
         print("Fallo al conectarse a MongoDB:", errorConexion)
 
 def crearRegistro():
-    if Nombre.get() != "" and Numero.get() != "" and Sexo.get() != "":
+    """
+    Crea un nuevo registro de jugador si todos los campos están completos.
+    """
+    if Nombre.get() and Numero.get() and Sexo.get():
         try:
             documento = {
                 "Nombre": Nombre.get(),
@@ -56,6 +65,10 @@ def crearRegistro():
         print("Todos los campos son obligatorios")
 
 def dobleClickTabla(event):
+    """
+    Carga los datos del jugador seleccionado al hacer doble clic en la tabla.
+    Permite editar o borrar el registro.
+    """
     global ID_Jugador
     seleccion = tabla.selection()
     if not seleccion:
@@ -65,6 +78,7 @@ def dobleClickTabla(event):
     try:
         documento = coleccion.find_one({"_id": ObjectId(ID_Jugador)})
 
+        # Rellenar los campos con los datos seleccionados
         Nombre.delete(0, END)
         Nombre.insert(0, documento["Nombre"])
         Sexo.delete(0, END)
@@ -79,6 +93,9 @@ def dobleClickTabla(event):
         print("Error al cargar datos del jugador:", e)
 
 def editarRegistro():
+    """
+    Edita el registro del jugador actualmente seleccionado.
+    """
     global ID_Jugador
     if Nombre.get() and Sexo.get() and Numero.get():
         try:
@@ -102,6 +119,9 @@ def editarRegistro():
     borrar["state"] = "disabled"
 
 def borrarRegistro():
+    """
+    Borra el registro del jugador actualmente seleccionado.
+    """
     global ID_Jugador
     try:
         idBuscar = {"_id": ObjectId(ID_Jugador)}
@@ -117,18 +137,25 @@ def borrarRegistro():
     borrar["state"] = "disabled"
 
 def limpiarCampos():
+    """
+    Limpia los campos de entrada del formulario principal.
+    """
     Nombre.delete(0, END)
     Sexo.delete(0, END)
     Numero.delete(0, END)
 
 def buscarRegistro():
+    """
+    Ejecuta la búsqueda de jugadores en base a los criterios introducidos.
+    """
     mostrarDatos(buscarNombre.get(), buscarSexo.get(), buscarNumero.get())
 
-# GUI
+# GUI principal
 ventana = Tk()
 ventana.title("CRUD Jugadores")
 ventana.geometry("500x500")
 
+# Tabla para mostrar registros
 tabla = ttk.Treeview(ventana, columns=(1, 2, 3))
 tabla.grid(row=1, column=0, columnspan=3, sticky=W+E)
 tabla.heading("#0", text="ID")
@@ -178,5 +205,6 @@ buscarNumero.grid(row=10, column=1, sticky=W+E)
 buscar = Button(ventana, text="Buscar jugador", command=buscarRegistro, bg="blue", fg="white")
 buscar.grid(row=11, columnspan=3, sticky=W+E)
 
+# Mostrar datos al iniciar
 mostrarDatos()
 ventana.mainloop()
